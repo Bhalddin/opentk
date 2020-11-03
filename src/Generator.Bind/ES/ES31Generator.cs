@@ -1,22 +1,16 @@
-﻿using System;
-using System.Collections.Generic;
-using System.IO;
-using System.Xml.XPath;
+﻿using System.IO;
 using Bind.GL2;
-using Bind.Structures;
-using Delegate=Bind.Structures.Delegate;
-using Enum=Bind.Structures.Enum;
 
 namespace Bind.ES
 {
     // Generation implementation for OpenGL ES 3.1
-    class ES31Generator : Generator
+    internal class ES31Generator : Generator
     {
         public ES31Generator(Settings settings)
             : base(settings)
         {
             Settings.DefaultOutputPath = Path.Combine(
-                Settings.DefaultOutputPath, "../ES31");
+                Settings.DefaultOutputPath, "./ES31");
             Settings.DefaultOutputNamespace = "OpenTK.Graphics.ES31";
             Settings.DefaultImportsFile = "ES31.Core.cs";
             Settings.DefaultDelegatesFile = "ES31.Delegates.cs";

@@ -1,12 +1,11 @@
-﻿#region License
-//
+﻿//
 // The Open Toolkit Library License
 //
 // Copyright (c) 2006 - 2013 Stefanos Apostolopoulos for the Open Toolkit library.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
-// in the Software without restriction, including without limitation the rights to 
+// in the Software without restriction, including without limitation the rights to
 // use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of
 // the Software, and to permit persons to whom the Software is furnished to do
 // so, subject to the following conditions:
@@ -23,14 +22,11 @@
 // FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
 // OTHER DEALINGS IN THE SOFTWARE.
 //
-#endregion
 
 using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.IO;
-using System.Linq;
-using System.Text;
-using System.Xml.Linq;
 using System.Xml.XPath;
 using Bind.Structures;
 
@@ -39,22 +35,18 @@ namespace Bind
     using Delegate = Bind.Structures.Delegate;
     using Enum = Bind.Structures.Enum;
 
-    class XmlSpecReader : ISpecReader
+    internal class XmlSpecReader : ISpecReader
     {
-        Settings Settings { get; set; }
-
-        #region Constructors
+        private Settings Settings { get; set; }
 
         public XmlSpecReader(Settings settings)
         {
             if (settings == null)
+            {
                 throw new ArgumentNullException("settings");
+            }
             Settings = settings;
         }
-
-        #endregion
-
-        #region ISpecReader Members
 
         public void ReadDelegates(string file, DelegateCollection delegates, string apiname, string apiversions)
         {
@@ -79,7 +71,9 @@ namespace Bind
                 foreach (XPathNavigator nav in specs.CreateNavigator().Select(xpath_delete))
                 {
                     foreach (XPathNavigator node in nav.SelectChildren("function", String.Empty))
+                    {
                         delegates.Remove(node.GetAttribute("name", String.Empty));
+                    }
                 }
                 foreach (XPathNavigator nav in specs.CreateNavigator().Select(xpath_add))
                 {
@@ -113,7 +107,9 @@ namespace Bind
                 foreach (XPathNavigator nav in specs.CreateNavigator().Select(xpath_delete))
                 {
                     foreach (XPathNavigator node in nav.SelectChildren("enum", String.Empty))
+                    {
                         enums.Remove(node.GetAttribute("name", String.Empty));
+                    }
                 }
                 foreach (XPathNavigator nav in specs.CreateNavigator().Select(xpath_add))
                 {
@@ -130,14 +126,18 @@ namespace Bind
                 Dictionary<string, string> GLTypes = new Dictionary<string, string>();
 
                 if (sr == null)
+                {
                     return GLTypes;
+                }
 
                 do
                 {
                     string line = sr.ReadLine();
 
                     if (String.IsNullOrEmpty(line) || line.StartsWith("#"))
+                    {
                         continue;
+                    }
 
                     string[] words = line.Split(" ,*\t".ToCharArray(), StringSplitOptions.RemoveEmptyEntries);
 
@@ -198,14 +198,20 @@ namespace Bind
                 {
                     string line = sr.ReadLine();
                     if (String.IsNullOrEmpty(line) || line.StartsWith("#"))
+                    {
                         continue;
+                    }
 
                     string[] words = line.Split(" ,\t".ToCharArray(), StringSplitOptions.RemoveEmptyEntries);
                     if (words.Length < 2)
+                    {
                         continue;
+                    }
 
                     if (((Settings.Compatibility & Settings.Legacy.NoBoolParameters) != Settings.Legacy.None) && words[1] == "bool")
+                    {
                         words[1] = "Int32";
+                    }
 
                     CSTypes.Add(words[0], words[1]);
                 }
@@ -214,11 +220,7 @@ namespace Bind
             }
         }
 
-        #endregion
-
-        #region Private Members
-
-        static void GetSignaturePaths(string apiname, string apiversion, out string xpath_add, out string xpath_delete)
+        private static void GetSignaturePaths(string apiname, string apiversion, out string xpath_add, out string xpath_delete)
         {
             xpath_add = "/signatures/add";
             xpath_delete = "/signatures/delete";
@@ -230,7 +232,7 @@ namespace Bind
                     "(contains(concat('|', @version, '|'), '|{1}|') or not(boolean(@version)))]",
                     apiname,
                     apiversion);
-                xpath_add += match; 
+                xpath_add += match;
                 xpath_delete += match;
             }
             else if (!String.IsNullOrEmpty(apiname))
@@ -241,7 +243,7 @@ namespace Bind
             }
         }
 
-        string GetSpecVersion(XPathDocument specs)
+        private string GetSpecVersion(XPathDocument specs)
         {
             var version =
                 specs.CreateNavigator().SelectSingleNode("/signatures")
@@ -253,7 +255,7 @@ namespace Bind
             return version;
         }
 
-        DelegateCollection ReadDelegates(XPathNavigator specs, string apiversion)
+        private DelegateCollection ReadDelegates(XPathNavigator specs, string apiversion)
         {
             DelegateCollection delegates = new DelegateCollection();
             var extensions = new List<string>();
@@ -268,8 +270,10 @@ namespace Bind
                 // our current apiversion. Extensions do not have a version,
                 // so we add them anyway (which is desirable).
                 if (!String.IsNullOrEmpty(version) && !String.IsNullOrEmpty(apiversion) &&
-                    Decimal.Parse(version) > Decimal.Parse(apiversion))
+                    Decimal.Parse(version, CultureInfo.InvariantCulture) > Decimal.Parse(apiversion, CultureInfo.InvariantCulture))
+                {
                     continue;
+                }
 
                 // Check whether we are adding to an existing delegate or creating a new one.
                 var d = new Delegate
@@ -284,7 +288,9 @@ namespace Bind
                     Obsolete = node.GetAttribute("obsolete", String.Empty).Trim()
                 };
                 if (!extensions.Contains(d.Extension))
+                {
                     extensions.Add(d.Extension);
+                }
 
                 foreach (XPathNavigator param in node.SelectChildren(XPathNodeType.Element))
                 {
@@ -299,26 +305,12 @@ namespace Bind
                             p.CurrentType = param.GetAttribute("type", String.Empty).Trim();
                             p.Name = param.GetAttribute("name", String.Empty).Trim();
 
-                            string element_count = param.GetAttribute("elementcount", String.Empty).Trim();
-                            if (String.IsNullOrEmpty(element_count))
-                            {
-                                element_count = param.GetAttribute("count", String.Empty).Trim();
-                                if (!String.IsNullOrEmpty(element_count))
-                                {
-                                    int count;
-                                    if (Int32.TryParse(element_count, out count))
-                                    {
-                                        p.ElementCount = count;
-                                    }
-                                }
-                            }
-                            
                             p.ComputeSize = param.GetAttribute("count", String.Empty).Trim();
-                            if (p.ComputeSize.StartsWith("COMPSIZE"))
+
+                            int elementCount;
+                            if (Int32.TryParse(p.ComputeSize, out elementCount))
                             {
-                                //remove the compsize hint, just keep comma delimited param names
-                                var len = "COMPSIZE(".Length;
-                                p.ComputeSize = p.ComputeSize.Substring(len, (p.ComputeSize.Length - len) - 1);
+                                p.ElementCount = elementCount;
                             }
 
                             p.Flow = Parameter.GetFlowDirection(param.GetAttribute("flow", String.Empty).Trim());
@@ -335,7 +327,7 @@ namespace Bind
             return delegates;
         }
 
-        EnumCollection ReadEnums(XPathNavigator nav)
+        private EnumCollection ReadEnums(XPathNavigator nav)
         {
             EnumCollection enums = new EnumCollection();
             Enum all = new Enum() { Name = Settings.CompleteEnumName };
@@ -356,7 +348,9 @@ namespace Bind
                     e.Obsolete = node.GetAttribute("obsolete", String.Empty).Trim();
 
                     if (String.IsNullOrEmpty(e.Name))
+                    {
                         throw new InvalidOperationException(String.Format("Empty name for enum element {0}", node.ToString()));
+                    }
 
                     // It seems that all flag collections contain "Mask" in their names.
                     // This looks like a heuristic, but it holds 100% in practice
@@ -466,7 +460,5 @@ restart:
             Utilities.Merge(enums, all);
             return enums;
         }
-
-        #endregion
     }
 }

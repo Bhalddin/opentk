@@ -1,18 +1,8 @@
-@echo off
-cls
+REM Install .NET Core (https://docs.microsoft.com/en-us/dotnet/core/tools/dotnet-install-script)
 
+@powershell -NoProfile -ExecutionPolicy unrestricted -Command "[Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12; &([scriptblock]::Create((Invoke-WebRequest -useb 'https://dot.net/v1/dotnet-install.ps1'))) --version 3.1.100"
+
+SET PATH=%LOCALAPPDATA%\Microsoft\dotnet;%PATH%
 .paket\paket.bootstrapper.exe
-if errorlevel 1 (
-  exit /b %errorlevel%
-)
-
-.paket\paket.exe restore
-if errorlevel 1 (
-  exit /b %errorlevel%
-)
-
-IF NOT EXIST build.fsx (
-  .paket\paket.exe update
-  packages\FAKE\tools\FAKE.exe init.fsx
-)
-packages\FAKE\tools\FAKE.exe build.fsx %*
+dotnet tool restore
+dotnet fake run build.fsx %* 
